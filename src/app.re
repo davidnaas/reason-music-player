@@ -9,7 +9,7 @@ type state = {
 
 type action =
   | TogglePlay
-  | Next;
+  | NextTrack;
 
 let setAudioRef = (theRef, {ReasonReact.state}) =>
   state.audioRef := Js.Nullable.to_opt(theRef);
@@ -31,22 +31,34 @@ let make = (_children) => {
     switch action {
     | TogglePlay =>
       ReasonReact.UpdateWithSideEffects(
-        {
-          isPlaying: ! state.isPlaying,
-          audioRef: state.audioRef,
-          index: state.index,
-          queue: state.queue
-        },
+        {...state, isPlaying: ! state.isPlaying},
         (
-          ({state: {audioRef, isPlaying}}) =>
+          ({state: {audioRef, isPlaying, queue, index}}) =>
             switch audioRef^ {
             | None => ()
             | Some(r) =>
               let audio = ReactDOMRe.domElementToObj(r);
+              audio##src#=queue[index];
               if (isPlaying) {
                 audio##play()
               } else {
                 audio##pause()
+              }
+            }
+        )
+      )
+    | NextTrack =>
+      ReasonReact.UpdateWithSideEffects(
+        {...state, index: state.index + 1},
+        (
+          ({state: {isPlaying, audioRef, queue, index}}) =>
+            switch audioRef^ {
+            | None => ()
+            | Some(r) =>
+              let audio = ReactDOMRe.domElementToObj(r);
+              audio##src#=queue[index];
+              if (isPlaying) {
+                audio##play()
               }
             }
         )
@@ -57,8 +69,8 @@ let make = (_children) => {
       <PlayerControls
         isPlaying
         onClickPlay=(reduce((_evt) => TogglePlay))
-        onClickNext=(reduce((_evt) => Next))
+        onClickNext=(reduce((_evt) => NextTrack))
       />
-      <audio ref=(handle(setAudioRef)) src=queue[index] />
+      <audio ref=(handle(setAudioRef)) />
     </div>
 };
